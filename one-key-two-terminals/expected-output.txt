@@ -1,0 +1,40 @@
+crossbearing divergence report
+  window   2026-06-24 13:30:05Z → 2026-06-24 14:52:06Z (offline (captured CloudTrail))
+  session  agent-audit-2026-06-24
+           agent=claude-code human=UNATTRIBUTED (unattributed) active 2026-06-24 14:00:05Z → 2026-06-24 14:22:06Z
+  claims   3 in transcript · 3 record-corroborable (aws CLI vocabulary)
+  records  4 in window · 4 joined (no principal filter)
+
+  unattributed 1 · mismatch 0 · unclaimed-record 0 · unrecorded-claim 0 · corroborated 3
+
+ATTRIBUTION
+  agent session agent-audit-2026… ⇄ credential session dana@example.com@2026-06-24T14:00:09Z key=ASIASSOCACHE00001
+    corroborated · human=UNATTRIBUTED (unattributed) · evidence: 3 item(s)
+
+UNATTRIBUTED (1)
+  record  s3:PutBucketPolicy at 14:11:30Z by arn:aws:sts::111122223333:assumed-role/AWSReservedSSO_Engineer_a1b2c3d4/dana@exa…
+          event ct-3
+  why     production-touching action with agent fingerprints and no named human binding
+
+
+CORROBORATED (3)
+  claim   Bash(aws sts get-caller-identity --output json) at 14:00:05Z
+  record  sts:GetCallerIdentity at 14:00:09Z by arn:aws:sts::111122223333:assumed-role/AWSReservedSSO_Engineer_a1b2c3d4/dana@exa…
+          event ct-1
+  why     claim corroborated by aws-cloudtrail record ct-1
+
+  claim   Bash(aws s3api get-bucket-policy --bucket prod-checkout-artifacts) at 14:04:00Z
+  record  s3:GetBucketPolicy at 14:04:05Z by arn:aws:sts::111122223333:assumed-role/AWSReservedSSO_Engineer_a1b2c3d4/dana@exa…
+          event ct-2
+  why     claim corroborated by aws-cloudtrail record ct-2
+
+  claim   Bash(aws s3api get-bucket-versioning --bucket prod-checkout-artifacts) at 14:22:00Z
+  record  s3:GetBucketVersioning at 14:22:05Z by arn:aws:sts::111122223333:assumed-role/AWSReservedSSO_Engineer_a1b2c3d4/dana@exa…
+          event ct-4
+  why     claim corroborated by aws-cloudtrail record ct-4
+
+
+AGENT-SUSPECT (1 of 1 unattributed)
+  record       s3:PutBucketPolicy by arn:aws:sts::111122223333:assumed-role/AWSReservedSSO_Engineer_a1b2c3d… (event ct-3)
+  fingerprint  credential session proven to be the agent's by corroborated record ct-1
+

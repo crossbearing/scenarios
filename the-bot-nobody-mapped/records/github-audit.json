@@ -1,0 +1,6 @@
+[
+  {"_document_id":"gh-1","action":"git.create_ref","actor":"mira-chen","actor_is_bot":false,"@timestamp":1782291635000,"created_at":1784624435000,"org":"shuttlecorp","repo":"shuttlecorp/prod-web","ref":"refs/heads/release/2026.07.21","operation_type":"create"},
+  {"_document_id":"gh-2","action":"pull_request.create","actor":"mira-chen","actor_is_bot":false,"@timestamp":1782291785000,"created_at":1784624585000,"org":"shuttlecorp","repo":"shuttlecorp/prod-web","pull_request_id":482,"operation_type":"create"},
+  {"_document_id":"gh-3","action":"git.push","actor":"deploy-shuttle[bot]","actor_is_bot":true,"@timestamp":1782292502000,"created_at":1784625302000,"org":"shuttlecorp","repo":"shuttlecorp/prod-web","ref":"refs/heads/release/2026.07.21","programmatic_access_type":"GitHub App server-to-server token","operation_type":"modify"},
+  {"_document_id":"gh-4","action":"pull_request.merge","actor":"deploy-shuttle[bot]","actor_is_bot":true,"@timestamp":1782292720000,"created_at":1784625520000,"org":"shuttlecorp","repo":"shuttlecorp/prod-web","pull_request_id":482,"programmatic_access_type":"GitHub App server-to-server token","operation_type":"modify"}
+]
