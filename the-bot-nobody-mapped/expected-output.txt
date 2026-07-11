@@ -1,0 +1,37 @@
+crossbearing divergence report
+  window   2026-06-24 08:30:30Z → 2026-06-24 09:50:05Z (offline (captured CloudTrail))
+  session  prod-release-2026-06-24
+           agent=claude-code human=UNATTRIBUTED (unattributed) active 2026-06-24 09:00:30Z → 2026-06-24 09:20:05Z
+  claims   3 in transcript · 2 record-corroborable (aws CLI vocabulary)
+  records  4 in window · 4 joined (no principal filter)
+
+  unattributed 2 · mismatch 0 · unclaimed-record 0 · unrecorded-claim 0 · corroborated 2
+
+ATTRIBUTION
+  agent session prod-release-202… ≈ credential session github:deploy-shuttle[bot]@2026-06-24T09:15:02Z
+    window-overlap · human=UNATTRIBUTED (unattributed) · evidence: 0 item(s)
+  agent session prod-release-202… ≈ credential session github:mira-chen@2026-06-24T09:00:35Z
+    window-overlap · human=mira-chen (actor-identity) · evidence: 2 item(s)
+    gap: records name the human; the agent session declared no operator — pass --operator so the declaration can be cross-checked against the records
+
+UNATTRIBUTED (2)
+  record  github-audit:git.push at 09:15:02Z by deploy-shuttle[bot]
+          event gh-3
+  why     production-touching action with agent fingerprints and no named human binding
+
+  record  github-audit:pull_request.merge at 09:18:40Z by deploy-shuttle[bot]
+          event gh-4
+  why     production-touching action with agent fingerprints and no named human binding
+
+
+CORROBORATED (2)
+  claim   mcp:github:create_branch at 09:00:30Z
+  record  github-audit:git.create_ref at 09:00:35Z by mira-chen
+          event gh-1
+  why     claim corroborated by github-audit record gh-1
+
+  claim   Bash(gh pr create --repo shuttlecorp/prod-web --base main --head release/2026.07.21 --titl… at 09:03:00Z
+  record  github-audit:pull_request.create at 09:03:05Z by mira-chen
+          event gh-2
+  why     claim corroborated by github-audit record gh-2
+

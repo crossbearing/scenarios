@@ -1,0 +1,37 @@
+crossbearing divergence report
+  window   2026-06-24 13:30:05Z → 2026-06-24 14:52:06Z (offline (captured CloudTrail))
+  session  agent-audit-2026-06-24
+           agent=claude-code human=dana@example.com (declared) active 2026-06-24 14:00:05Z → 2026-06-24 14:22:06Z
+  claims   3 in transcript · 3 record-corroborable (aws CLI vocabulary)
+  records  4 in window · 4 joined (no principal filter)
+
+  unattributed 0 · mismatch 0 · unclaimed-record 1 · unrecorded-claim 0 · corroborated 3
+
+ATTRIBUTION
+  agent session agent-audit-2026… ⇄ credential session claude-agent@2026-06-24T14:00:09Z key=ASIAAGENTRUNR0001
+    corroborated · human=dana@example.com (sts-source-identity) · evidence: 6 item(s)
+  agent session agent-audit-2026… ≈ credential session dana@example.com@2026-06-24T14:11:30Z key=ASIASSOCACHE00001
+    window-overlap · human=dana@example.com (declared) · evidence: 0 item(s)
+
+UNCLAIMED-RECORD (1)
+  record  s3:PutBucketPolicy at 14:11:30Z by arn:aws:sts::111122223333:assumed-role/AWSReservedSSO_Engineer_a1b2c3d4/dana@exa…
+          event ct-3
+  why     infrastructure recorded this action inside an agent session window; no claim accounts for it
+
+
+CORROBORATED (3)
+  claim   Bash(aws sts get-caller-identity --output json) at 14:00:05Z
+  record  sts:GetCallerIdentity at 14:00:09Z by arn:aws:sts::111122223333:assumed-role/agent-runner/claude-agent as dana@example.com
+          event ct-1
+  why     claim corroborated by aws-cloudtrail record ct-1
+
+  claim   Bash(aws s3api get-bucket-policy --bucket prod-checkout-artifacts) at 14:04:00Z
+  record  s3:GetBucketPolicy at 14:04:05Z by arn:aws:sts::111122223333:assumed-role/agent-runner/claude-agent as dana@example.com
+          event ct-2
+  why     claim corroborated by aws-cloudtrail record ct-2
+
+  claim   Bash(aws s3api get-bucket-versioning --bucket prod-checkout-artifacts) at 14:22:00Z
+  record  s3:GetBucketVersioning at 14:22:05Z by arn:aws:sts::111122223333:assumed-role/agent-runner/claude-agent as dana@example.com
+          event ct-4
+  why     claim corroborated by aws-cloudtrail record ct-4
+

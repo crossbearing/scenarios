@@ -1,0 +1,36 @@
+crossbearing divergence report
+  window   2026-06-23 13:30:05Z → 2026-06-23 14:56:06Z (offline (captured CloudTrail))
+  session  prod-deploy-2026-06-23
+           agent=claude-code human=UNATTRIBUTED (unattributed) active 2026-06-23 14:00:05Z → 2026-06-23 14:26:06Z
+  claims   3 in transcript · 3 record-corroborable (aws CLI vocabulary)
+  records  4 in window · 4 joined (no principal filter)
+
+  unattributed 0 · mismatch 0 · unclaimed-record 1 · unrecorded-claim 0 · corroborated 3
+
+ATTRIBUTION
+  agent session prod-deploy-2026… ⇄ credential session deploy-bot@2026-06-23T14:00:09Z key=ASIADEPLOYBOT0001
+    corroborated · human=priya@example.com (sts-source-identity) · evidence: 7 item(s)
+    gap: records name the human; the agent session declared no operator — pass --operator so the declaration can be cross-checked against the records
+
+UNCLAIMED-RECORD (1)
+  record  lambda:UpdateFunctionCode at 14:12:40Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot as priya@example.com
+          event ct-3
+  why     infrastructure recorded this action inside an agent session window; no claim accounts for it
+
+
+CORROBORATED (3)
+  claim   Bash(aws sts get-caller-identity --output json) at 14:00:05Z
+  record  sts:GetCallerIdentity at 14:00:09Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot as priya@example.com
+          event ct-1
+  why     claim corroborated by aws-cloudtrail record ct-1
+
+  claim   Bash(aws lambda get-function --function-name prod-checkout-api) at 14:03:00Z
+  record  lambda:GetFunction at 14:03:05Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot as priya@example.com
+          event ct-2
+  why     claim corroborated by aws-cloudtrail record ct-2
+
+  claim   Bash(aws lambda publish-version --function-name prod-checkout-api) at 14:26:00Z
+  record  lambda:PublishVersion at 14:26:05Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot as priya@example.com
+          event ct-4
+  why     claim corroborated by aws-cloudtrail record ct-4
+
