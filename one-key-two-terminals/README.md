@@ -72,7 +72,7 @@ ATTRIBUTION
     corroborated · human=UNATTRIBUTED (unattributed) · evidence: 3 item(s)
 
 UNATTRIBUTED (1)
-  record  s3:PutBucketPolicy at 14:11:30Z by arn:aws:sts::111122223333:assumed-role/AWSReservedSSO_Engineer_a1b2c3d4/dana@exa…
+  record  s3:PutBucketPolicy on arn:aws:s3:::prod-checkout-artifacts at 14:11:30Z by arn:aws:sts::111122223333:assumed-role/AWSReservedSSO_Engineer_a1b2c3d4/dana@exa…
           event ct-3
   why     production-touching action with agent fingerprints and no named human binding
 
@@ -187,7 +187,7 @@ ATTRIBUTION
     window-overlap · human=dana@example.com (declared) · evidence: 0 item(s)
 
 UNCLAIMED-RECORD (1)
-  record  s3:PutBucketPolicy at 14:11:30Z by arn:aws:sts::111122223333:assumed-role/AWSReservedSSO_Engineer_a1b2c3d4/dana@exa…
+  record  s3:PutBucketPolicy on arn:aws:s3:::prod-checkout-artifacts at 14:11:30Z by arn:aws:sts::111122223333:assumed-role/AWSReservedSSO_Engineer_a1b2c3d4/dana@exa…
           event ct-3
   why     infrastructure recorded this action inside an agent session window; no claim accounts for it
 ```

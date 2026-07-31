@@ -21,4 +21,5 @@ cd "$(dirname "$0")"
 "${CROSSBEARING:-crossbearing}" report \
   --transcript     claims/transcript.jsonl \
   --aws-cloudtrail records/aws-cloudtrail-fixed.json \
-  --operator       dana@example.com
+  --operator       dana@example.com \
+  --principal      audit-bot
