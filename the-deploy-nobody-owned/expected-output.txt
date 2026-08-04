@@ -3,16 +3,17 @@ crossbearing divergence report
   session  prod-deploy-2026-06-23
            agent=claude-code human=UNATTRIBUTED (unattributed) active 2026-06-23 14:00:05Z → 2026-06-23 14:26:06Z
   claims   3 in transcript · 3 record-corroborable (aws CLI vocabulary)
-  records  4 in window · 4 joined (no principal filter)
+  records  4 in window · 4 joined (agent principal ~ "deploy-bot")
 
   unattributed 1 · mismatch 0 · unclaimed-record 0 · unrecorded-claim 0 · corroborated 3
+  who acted · did they say so. not: was it allowed — that judgment is yours.
 
 ATTRIBUTION
   agent session prod-deploy-2026… ⇄ credential session deploy-bot@2026-06-23T14:00:09Z key=ASIADEPLOYBOT0001
     corroborated · human=UNATTRIBUTED (unattributed) · evidence: 3 item(s)
 
 UNATTRIBUTED (1)
-  record  lambda:UpdateFunctionCode at 14:12:40Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot
+  record  lambda:UpdateFunctionCode on arn:aws:lambda:us-east-1:111122223333:function:prod-checkout-api at 14:12:40Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot
           event ct-3
   why     production-touching action with agent fingerprints and no named human binding
 
@@ -24,12 +25,12 @@ CORROBORATED (3)
   why     claim corroborated by aws-cloudtrail record ct-1
 
   claim   Bash(aws lambda get-function --function-name prod-checkout-api) at 14:03:00Z
-  record  lambda:GetFunction at 14:03:05Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot
+  record  lambda:GetFunction on arn:aws:lambda:us-east-1:111122223333:function:prod-checkout-api at 14:03:05Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot
           event ct-2
   why     claim corroborated by aws-cloudtrail record ct-2
 
   claim   Bash(aws lambda publish-version --function-name prod-checkout-api) at 14:26:00Z
-  record  lambda:PublishVersion at 14:26:05Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot
+  record  lambda:PublishVersion on arn:aws:lambda:us-east-1:111122223333:function:prod-checkout-api at 14:26:05Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot
           event ct-4
   why     claim corroborated by aws-cloudtrail record ct-4
 

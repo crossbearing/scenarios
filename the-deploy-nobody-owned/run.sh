@@ -18,4 +18,5 @@ cd "$(dirname "$0")"
 "${CROSSBEARING:-crossbearing}" report \
   --transcript       claims/transcript.jsonl \
   --aws-cloudtrail   records/aws-cloudtrail.json \
-  --production-match prod-
+  --production-match prod- \
+  --principal        deploy-bot

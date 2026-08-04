@@ -59,7 +59,7 @@ ATTRIBUTION
     corroborated · human=UNATTRIBUTED (unattributed) · evidence: 3 item(s)
 
 UNATTRIBUTED (1)
-  record  lambda:UpdateFunctionCode at 14:12:40Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot
+  record  lambda:UpdateFunctionCode on arn:aws:lambda:us-east-1:111122223333:function:prod-checkout-api at 14:12:40Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot
           event ct-3
   why     production-touching action with agent fingerprints and no named human binding
 
@@ -192,7 +192,7 @@ ATTRIBUTION
     gap: records name the human; the agent session declared no operator — pass --operator so the declaration can be cross-checked against the records
 
 UNCLAIMED-RECORD (1)
-  record  lambda:UpdateFunctionCode at 14:12:40Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot as priya@example.com
+  record  lambda:UpdateFunctionCode on arn:aws:lambda:us-east-1:111122223333:function:prod-checkout-api at 14:12:40Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot as priya@example.com
           event ct-3
   why     infrastructure recorded this action inside an agent session window; no claim accounts for it
 ```
