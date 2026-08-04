@@ -55,23 +55,29 @@ jobs:
       # Every scenario, both variants, byte-for-byte against its fixture. The
       # loop runs all of them before failing so one broken scenario does not
       # hide the state of the other three.
+      #
+      # Output goes to a file, never through $(...): command substitution strips
+      # trailing newlines, and these fixtures end on a blank line, so capturing
+      # to a variable silently rewrites the very bytes this step exists to
+      # compare. A file keeps the comparison honest.
       - name: Replay every scenario
         env:
           CROSSBEARING: ${{ runner.temp }}/crossbearing
         run: |
           fail=0
+          actual="$RUNNER_TEMP/actual.txt"
           for dir in */; do
             name="${dir%/}"
             for pair in "run.sh:expected-output.txt" "run-fixed.sh:expected-output-fixed.txt"; do
               script="${pair%%:*}"
               expected="${pair##*:}"
               [ -f "$name/$script" ] && [ -f "$name/$expected" ] || continue
-              if actual=$("./$name/$script" 2>/dev/null) && \
-                 printf '%s\n' "$actual" | diff -u "$name/$expected" - > /dev/null; then
+              if "./$name/$script" > "$actual" 2>/dev/null && \
+                 diff -u "$name/$expected" "$actual" > /dev/null; then
                 echo "PASS  $name/$script"
               else
                 echo "FAIL  $name/$script"
-                printf '%s\n' "$actual" | diff -u "$name/$expected" - || true
+                diff -u "$name/$expected" "$actual" || true
                 fail=1
               fi
             done
