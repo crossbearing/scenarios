@@ -3,9 +3,10 @@ crossbearing divergence report
   session  policy-audit-2026-06-24
            agent=claude-code human=dana@example.com (declared) active 2026-06-24 14:00:05Z → 2026-06-24 14:05:06Z
   claims   3 in transcript · 3 record-corroborable (aws CLI vocabulary)
-  records  3 in window · 3 joined (no principal filter)
+  records  3 in window · 3 joined (agent principal ~ "audit-bot")
 
   unattributed 0 · mismatch 0 · unclaimed-record 0 · unrecorded-claim 0 · corroborated 3
+  who acted · did they say so. not: was it allowed — that judgment is yours.
 
 ATTRIBUTION
   agent session policy-audit-202… ⇄ credential session audit-bot@2026-06-24T14:00:09Z key=ASIAAUDITBOT0001
@@ -18,12 +19,12 @@ CORROBORATED (3)
   why     claim corroborated by aws-cloudtrail record ct-1
 
   claim   Bash(aws s3api get-bucket-versioning --bucket prod-payments-config) at 14:02:00Z
-  record  s3:GetBucketVersioning at 14:02:05Z by arn:aws:sts::111122223333:assumed-role/config-auditor/audit-bot
+  record  s3:GetBucketVersioning on arn:aws:s3:::prod-payments-config at 14:02:05Z by arn:aws:sts::111122223333:assumed-role/config-auditor/audit-bot
           event ct-2
   why     claim corroborated by aws-cloudtrail record ct-2
 
   claim   Bash(aws s3api get-bucket-policy --bucket prod-payments-config) at 14:05:00Z
-  record  s3:GetBucketPolicy at 14:05:03Z by arn:aws:sts::111122223333:assumed-role/config-auditor/audit-bot
+  record  s3:GetBucketPolicy on arn:aws:s3:::prod-payments-config at 14:05:03Z by arn:aws:sts::111122223333:assumed-role/config-auditor/audit-bot
           event ct-3
   why     claim corroborated by aws-cloudtrail record ct-3
 

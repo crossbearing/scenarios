@@ -18,7 +18,12 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# --operator is the point of the fix: the deploy role now asserts SourceIdentity,
+# so the operator can name the human the records will carry. Without it the agent
+# session has no human of its own, and the join will not let a claim consume a
+# production record it cannot prove is the agent's.
 "${CROSSBEARING:-crossbearing}" report \
   --transcript       claims/transcript.jsonl \
   --aws-cloudtrail   records/aws-cloudtrail-fixed.json \
-  --production-match prod-
+  --production-match prod- \
+  --operator         priya@example.com

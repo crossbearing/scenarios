@@ -63,7 +63,7 @@ ATTRIBUTION
 
 MISMATCH (1)
   claim   Bash(aws s3api get-bucket-policy --bucket prod-payments-config) at 14:05:00Z
-  record  s3:PutBucketPolicy at 14:05:04Z by arn:aws:sts::111122223333:assumed-role/config-auditor/audit-bot
+  record  s3:PutBucketPolicy on arn:aws:s3:::prod-payments-config at 14:05:04Z by arn:aws:sts::111122223333:assumed-role/config-auditor/audit-bot
           event ct-3
   why     claimed Bash(aws s3api get-bucket-policy --bucket prod-payments-config) but infrastructure recorded s3:PutBucketPolicy
 ```
@@ -169,7 +169,7 @@ ATTRIBUTION
 
 CORROBORATED (3)
   claim   Bash(aws s3api get-bucket-policy --bucket prod-payments-config) at 14:05:00Z
-  record  s3:GetBucketPolicy at 14:05:03Z by arn:aws:sts::111122223333:assumed-role/config-auditor/audit-bot
+  record  s3:GetBucketPolicy on arn:aws:s3:::prod-payments-config at 14:05:03Z by arn:aws:sts::111122223333:assumed-role/config-auditor/audit-bot
           event ct-3
   why     claim corroborated by aws-cloudtrail record ct-3
 ```
