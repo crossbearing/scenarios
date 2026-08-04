@@ -21,9 +21,16 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# --principal names the identity the agent acts as: mira-chen ran this session,
+# and an MCP/gh agent acts through her GitHub token, so the platform records her
+# login as the actor. Asserting it is what lets her records corroborate the
+# agent's claims. It is NOT a claim about the App — deploy-shuttle[bot] is a
+# different actor, and its production writes stay unattributed, which is the
+# finding this scenario exists to show.
 "${CROSSBEARING:-crossbearing}" report \
   --transcript       claims/transcript.jsonl \
   --aws-cloudtrail   records/aws-cloudtrail-empty.json \
   --github-audit     records/github-audit.json \
   --github-org       shuttlecorp \
-  --production-match prod-
+  --production-match prod- \
+  --principal        mira-chen

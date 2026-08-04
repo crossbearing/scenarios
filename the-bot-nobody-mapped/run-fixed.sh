@@ -29,4 +29,5 @@ cd "$(dirname "$0")"
   --github-audit      records/github-audit.json \
   --github-org        shuttlecorp \
   --production-match  prod- \
+  --principal         mira-chen \
   --github-app-humans fix/app-humans.after.json

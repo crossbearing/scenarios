@@ -75,7 +75,7 @@ crossbearing divergence report
   session  prod-release-2026-06-24
            agent=claude-code human=UNATTRIBUTED (unattributed) active 2026-06-24 09:00:30Z → 2026-06-24 09:20:05Z
   claims   3 in transcript · 2 record-corroborable (aws CLI vocabulary)
-  records  4 in window · 4 joined (no principal filter)
+  records  4 in window · 4 joined (agent principal ~ "mira-chen")
 
   unattributed 2 · mismatch 0 · unclaimed-record 0 · unrecorded-claim 0 · corroborated 2
 
@@ -87,11 +87,11 @@ ATTRIBUTION
     gap: records name the human; the agent session declared no operator — pass --operator so the declaration can be cross-checked against the records
 
 UNATTRIBUTED (2)
-  record  github-audit:git.push at 09:15:02Z by deploy-shuttle[bot]
+  record  github-audit:git.push on shuttlecorp/prod-web, shuttlecorp at 09:15:02Z by deploy-shuttle[bot]
           event gh-3
   why     production-touching action with agent fingerprints and no named human binding
 
-  record  github-audit:pull_request.merge at 09:18:40Z by deploy-shuttle[bot]
+  record  github-audit:pull_request.merge on shuttlecorp/prod-web, shuttlecorp at 09:18:40Z by deploy-shuttle[bot]
           event gh-4
   why     production-touching action with agent fingerprints and no named human binding
 ```
@@ -241,11 +241,11 @@ ATTRIBUTION
     gap: records name the human; the agent session declared no operator — pass --operator so the declaration can be cross-checked against the records
 
 UNCLAIMED-RECORD (2)
-  record  github-audit:git.push at 09:15:02Z by deploy-shuttle[bot] as dana-okafor@shuttlecorp.com
+  record  github-audit:git.push on shuttlecorp/prod-web, shuttlecorp at 09:15:02Z by deploy-shuttle[bot] as dana-okafor@shuttlecorp.com
           event gh-3
   why     infrastructure recorded this action inside an agent session window; no claim accounts for it
 
-  record  github-audit:pull_request.merge at 09:18:40Z by deploy-shuttle[bot] as dana-okafor@shuttlecorp.com
+  record  github-audit:pull_request.merge on shuttlecorp/prod-web, shuttlecorp at 09:18:40Z by deploy-shuttle[bot] as dana-okafor@shuttlecorp.com
           event gh-4
   why     infrastructure recorded this action inside an agent session window; no claim accounts for it
 ```
