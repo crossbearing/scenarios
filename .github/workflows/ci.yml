@@ -1,0 +1,100 @@
+name: ci
+
+# The gallery is a promise: every scenario runs offline in seconds and prints
+# what its README says it prints. Nothing enforced that, and all eight runs had
+# quietly drifted from the engine — the published findings no longer reproduced.
+#
+# This builds the engine from source and replays every scenario against its
+# committed fixture. It fails on the first byte of difference, so the gallery
+# cannot silently stop being true again.
+#
+# The engine is a separate repository, so this is a cross-repo gate: a change
+# there can turn this red without a commit here. That is the point. The weekly
+# schedule is what catches it, since engine changes do not touch this repo.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  # Engine drift lands without a commit here, so polling is the only way to see
+  # it. Mondays 07:30 UTC, after the org's three dependency scans.
+  schedule:
+    - cron: "30 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The engine is public, so no token is needed. Pinned to main: this gate
+      # answers "does the gallery hold against the engine we ship today", which
+      # is the question a reader cloning both repos is really asking.
+      - name: Check out the engine
+        uses: actions/checkout@v7
+        with:
+          repository: crossbearing/crossbearing
+          ref: main
+          path: .engine
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: .engine/go.mod
+          cache-dependency-path: .engine/go.sum
+
+      - name: Build the engine
+        run: go build -o "$RUNNER_TEMP/crossbearing" ./cmd/crossbearing
+        working-directory: .engine
+
+      # Every scenario, both variants, byte-for-byte against its fixture. The
+      # loop runs all of them before failing so one broken scenario does not
+      # hide the state of the other three.
+      - name: Replay every scenario
+        env:
+          CROSSBEARING: ${{ runner.temp }}/crossbearing
+        run: |
+          fail=0
+          for dir in */; do
+            name="${dir%/}"
+            for pair in "run.sh:expected-output.txt" "run-fixed.sh:expected-output-fixed.txt"; do
+              script="${pair%%:*}"
+              expected="${pair##*:}"
+              [ -f "$name/$script" ] && [ -f "$name/$expected" ] || continue
+              if actual=$("./$name/$script" 2>/dev/null) && \
+                 printf '%s\n' "$actual" | diff -u "$name/$expected" - > /dev/null; then
+                echo "PASS  $name/$script"
+              else
+                echo "FAIL  $name/$script"
+                printf '%s\n' "$actual" | diff -u "$name/$expected" - || true
+                fail=1
+              fi
+            done
+          done
+          exit "$fail"
+
+      # A scenario's README quotes report lines verbatim. When a fixture is
+      # regenerated and the prose is not, the gallery contradicts itself just as
+      # loudly as a stale fixture does — and that is invisible to the diff above.
+      - name: Check the READMEs still quote real output
+        run: |
+          fail=0
+          for dir in */; do
+            name="${dir%/}"
+            [ -f "$name/README.md" ] || continue
+            while IFS= read -r line; do
+              [ -z "${line//[[:space:]]/}" ] && continue
+              if ! grep -Fqx "$line" "$name"/expected-output*.txt 2>/dev/null; then
+                echo "FAIL  $name/README.md quotes a line no fixture produces:"
+                echo "      $line"
+                fail=1
+              fi
+            done < <(grep -hE '^  (record|claim|why|records)  ' "$name/README.md" || true)
+          done
+          [ "$fail" = "0" ] && echo "PASS  every quoted report line appears in a fixture"
+          exit "$fail"
