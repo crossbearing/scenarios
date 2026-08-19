@@ -25,9 +25,16 @@ it tells you exactly what to change.
 
 ## Running a scenario
 
-Each scenario runs against the crossbearing engine:
+Each scenario runs against the crossbearing engine. The pinned outputs were
+verified against the commit in [`.engine-pin`](.engine-pin), and CI replays every
+scenario against **both** that commit and the engine's current `main` — so either
+install reproduces what the READMEs show:
 
 ```sh
+# the exact engine the pinned outputs were verified against
+go install "github.com/crossbearing/crossbearing/cmd/crossbearing@$(cat .engine-pin)"
+
+# or today's engine — CI proves the gallery still holds against it
 go install github.com/crossbearing/crossbearing/cmd/crossbearing@latest
 
 cd the-deploy-nobody-owned
@@ -49,6 +56,17 @@ out. `expected-output.txt` in each scenario pins what you should see.
 
 More arcs are charted as record streams earn them. Each lands when its fix
 walkthrough is as honest as its detection.
+
+### Adding one
+
+A scenario is a directory, and CI asserts the shape before it runs anything:
+`README.md`, an executable `run.sh` and `run-fixed.sh`, and the
+`expected-output.txt` / `expected-output-fixed.txt` pair they are pinned to.
+A missing piece fails the run rather than being skipped.
+
+Quote the report inside a **bare fenced block** and every line of it is checked
+against the fixtures verbatim — that check is what keeps the prose and the tool
+from drifting apart. Tagged blocks (`sh`, `json`, `diff`) are left alone.
 
 ## What this repo is not
 
