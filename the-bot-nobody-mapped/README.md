@@ -97,16 +97,24 @@ UNATTRIBUTED (2)
 (Full pinned output, including the two CORROBORATED findings, in
 [`expected-output.txt`](expected-output.txt).)
 
-The **how-it-happens** is what the ATTRIBUTION block does *not* contain. It names
-exactly one credential session — `github:mira-chen`, resolving to
-`human=mira-chen (actor-identity)`. `deploy-shuttle[bot]` gets no binding line at
-all, because a GitHub App actor carries no access key and no assumed-role session
-name, so there is nothing for the engine to bind a session to. The App exists in
-this report only as records. Same window, same production repo: the engine can
-name one hand on the wheel, and for the other it has no line to write. The
-**how-we-help** is the UNATTRIBUTED tier: the two production writes the log could
-not assign to anyone are pulled out by name and event ID, not left in a scroll of
-routine audit noise.
+The **how-it-happens** is the UNATTRIBUTED pair set against the single binding
+the report shows. `run.sh` asserts `--principal mira-chen`, and that assertion
+scopes the ATTRIBUTION view: the engine hands `attribute.Bind` only the credential
+sessions whose ID matches the asserted principal
+([`cmd/crossbearing/main.go`](../../crossbearing/cmd/crossbearing/main.go), the
+`recordSessions` filter). So the block names `github:mira-chen`, the human the
+records authenticate as herself. The bot's own credential session — which the
+engine *does* build, and which the mapping below binds — is simply outside this
+view.
+
+The scoping is not cosmetic. Drop `--principal` and mira-chen's own records stop
+being corroborable at all (`corroborated 2 → 0`, `unattributed 2 → 4`), because
+the operator has then asserted nothing about which principal is the agent's, and
+the engine will not guess.
+
+The **how-we-help** is the UNATTRIBUTED tier: the two production writes the log
+could not assign to anyone are pulled out by name and event ID, not left in a
+scroll of routine audit noise.
 
 The `gap:` line under the `mira-chen` binding is the convention nudge, not a
 finding: the records *do* name a human here (mira-chen, cloud-authenticated as
@@ -252,13 +260,18 @@ UNCLAIMED-RECORD (2)
 every run is byte-for-byte identical.)
 
 The headline moves the whole distance: `unattributed 2 → 0`. Notice where it does
-*not* show up — the ATTRIBUTION block is byte-identical to the detection's. The
-mapping conjures no credential session for the App; there is still no key and no
-session name to bind one to. What it does is stamp the mapped human onto every
-event the App emitted, so every bot record now renders that identity inline
-(`… by deploy-shuttle[bot] as dana-okafor@shuttlecorp.com`) and the mapping is
-legible at the exact line where the de-escalation happens. The App stops being
-anonymous on the record — the only place it was ever visible.
+*not* show up — the ATTRIBUTION block is byte-identical to the detection's. That
+is the `--principal mira-chen` scope again, not an absence of binding: the
+ingester does bind the bot's session to `dana-okafor@shuttlecorp.com` with method
+`github-app`, exactly as described above, but that session sits outside the
+asserted principal, so this view does not print it.
+
+What closes the finding is the other half — the per-event stamp. Every bot record
+now renders the mapped human inline
+(`… by deploy-shuttle[bot] as dana-okafor@shuttlecorp.com`), so the de-escalation
+is legible at the exact line where it happens and rests on the record rather than
+on which overlapping window the record fell into. The App stops being anonymous
+where it counts.
 
 And the two production writes? They are **still there** — `run-fixed.sh` still
 lists them as `UNCLAIMED-RECORD`, because the agent still never claimed them, and

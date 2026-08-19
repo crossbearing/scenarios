@@ -212,12 +212,15 @@ owner. `unattributed 1 → 0`, on the strength of the record alone.
 `--operator priya@example.com`, and the flag earns its place — it is not just a
 convention nudge. The trust policy alone closes the *headline*: record-carried
 identity de-escalates the write whatever the launch side says. But the *join*
-still needs to know whose session this is. Drop `--operator` and the engine
-refuses to let a claim consume a production record it cannot prove is the
-agent's, so the `publish-version` pair splits in half — the record becomes a
-second `UNCLAIMED-RECORD` and its claim becomes an `UNRECORDED-CLAIM`
-(`unclaimed-record 1 → 2`, `corroborated 3 → 2`) — and an ATTRIBUTION `gap:`
-line appears asking for the declaration. With it, both halves agree: the session
+still needs to know whose session this is. The rule keys on **write-ness, not
+production-ness**: a read changed nothing, so mis-pairing one can erase no
+divergence and reads stay freely matchable, but a write must prove ownership —
+which means the record's `sourceIdentity` equalling the session's human
+(`internal/corroborate/matcher.go`, the `consumable` guard). Undeclared, the
+session's human is empty, so nothing matches and the `publish-version` pair
+splits in half — the record becomes a second `UNCLAIMED-RECORD` and its claim an
+`UNRECORDED-CLAIM` (`unclaimed-record 1 → 2`, `corroborated 3 → 2`) — and an
+ATTRIBUTION `gap:` line appears asking for the declaration. With it, both halves agree: the session
 line reads `(declared)`, the ATTRIBUTION line binds `(sts-source-identity)` from
 the records, and the report raises neither a gap nor a `CONFLICT`.
 
@@ -258,9 +261,12 @@ events carry `sourceIdentity`, the record names priya, and the finding drops to 
 plain `UNCLAIMED-RECORD` — `unattributed 1 → 0` without the harness saying a
 word. The launch-side control is a separate job, and `run-fixed.sh` wires it with
 `--operator`. That buys more than a cross-check: the join will not let a claim
-consume a *production* record it cannot prove belongs to the agent, so an
-undeclared session leaves `lambda:PublishVersion` split into an
-`UNCLAIMED-RECORD` plus an `UNRECORDED-CLAIM` instead of one corroborated pair.
+consume a *write* it cannot prove belongs to the agent — and it gates on
+write-ness rather than production-ness on purpose, because a write's
+production-ness may be unknown to the ingester while the fact that it changed
+something is not. So an undeclared session leaves `lambda:PublishVersion` split
+into an `UNCLAIMED-RECORD` plus an `UNRECORDED-CLAIM` instead of one corroborated
+pair.
 Declared, the two agree, and the engine confirms the harness's word against the
 records — raising `CONFLICT` if they ever disagreed.
 

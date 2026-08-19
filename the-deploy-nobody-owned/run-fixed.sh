@@ -16,10 +16,12 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 # --operator declares the same human the records already carry, and it earns its
-# place here rather than just clearing a convention nudge. Drop it and the agent
-# session has no human of its own, so the join refuses to let a claim consume a
-# production record it cannot prove is the agent's: lambda:PublishVersion splits
-# into an UNCLAIMED-RECORD plus an UNRECORDED-CLAIM (unclaimed-record 1 → 2,
+# place here rather than just clearing a convention nudge. The join will not let
+# a claim consume a WRITE it cannot prove is the agent's — the guard keys on
+# read-vs-write, not on production-ness — and ownership is proved by the record's
+# sourceIdentity equalling the session's human. Drop this flag and the session
+# has no human, so nothing matches: lambda:PublishVersion splits into an
+# UNCLAIMED-RECORD plus an UNRECORDED-CLAIM (unclaimed-record 1 → 2,
 # corroborated 3 → 2), and an ATTRIBUTION gap line appears asking for it. With
 # it, declaration and record agree — the session line reads (declared), the
 # ATTRIBUTION line binds (sts-source-identity), and the report raises neither a
