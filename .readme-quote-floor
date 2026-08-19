@@ -1,0 +1,7 @@
+# Minimum report lines each scenario README must quote inside bare fences.
+# The gate refuses a drop below these. Lowering one is a deliberate edit,
+# visible in the same diff — coverage cannot decay quietly.
+a-write-behind-a-read	18
+one-key-two-terminals	21
+the-bot-nobody-mapped	30
+the-deploy-nobody-owned	19

@@ -65,6 +65,11 @@ jobs:
       # means updating this step.
       - name: Check the scenario contract
         run: |
+          # nullglob so an empty gallery yields zero iterations. Without it `*/`
+          # expands to the literal string, count is 1, and the "gallery is empty"
+          # branch below can never fire — a guard that cannot fail, which is the
+          # thing this file exists to stop shipping.
+          shopt -s nullglob
           fail=0
           count=0
           for dir in */; do
@@ -116,28 +121,41 @@ jobs:
             awk '
               { line = $0; sub(/[ \t]+$/, "", line) }
               line ~ /^```/ {
-                if (inblock) { inblock = 0 } else { inblock = (line == "```") ? 1 : 2 }
+                if (inblock == 2 && tagged ~ /run-fixed\.sh/) { fixture = "expected-output-fixed.txt" }
+                else if (inblock == 2 && tagged ~ /run\.sh/)  { fixture = "expected-output.txt" }
+                if (inblock) { inblock = 0; tagged = "" }
+                else { inblock = (line == "```") ? 1 : 2 }
                 next
               }
-              inblock == 1 { print }
+              inblock == 2 { tagged = tagged "\n" line; next }
+              inblock == 1 { print (fixture == "" ? "?" : fixture) "\t" line }
             ' "$name/README.md" > "$quoted"
 
             checked=0
-            while IFS= read -r line; do
+            while IFS=$'\t' read -r fixture line; do
               [ -z "${line//[[:space:]]/}" ] && continue
               checked=$((checked + 1))
-              if ! grep -Fqx "$line" "$name"/expected-output*.txt; then
-                echo "FAIL  $name/README.md quotes a line no fixture produces:"
+              if [ "$fixture" = "?" ]; then
+                echo "FAIL  $name/README.md quotes output before naming which script produced it:"
+                echo "      $line"
+                fail=1
+              elif ! grep -Fqx "$line" "$name/$fixture"; then
+                echo "FAIL  $name/README.md quotes a line $fixture does not produce:"
                 echo "      $line"
                 fail=1
               fi
             done < "$quoted"
 
-            if [ "$checked" -eq 0 ]; then
-              echo "FAIL  $name/README.md quotes no report output at all"
+            floor=$(awk -v s="$name" '$1 == s { print $2 }' .readme-quote-floor)
+            if [ -z "$floor" ]; then
+              echo "FAIL  $name has no entry in .readme-quote-floor"
+              fail=1
+            elif [ "$checked" -lt "$floor" ]; then
+              echo "FAIL  $name/README.md quotes $checked line(s), floor is $floor —"
+              echo "      coverage may only be lowered deliberately, in the same diff"
               fail=1
             elif [ "$fail" = 0 ]; then
-              echo "PASS  $name/README.md — $checked quoted line(s) match a fixture"
+              echo "PASS  $name/README.md — $checked quoted line(s) match $floor-line floor"
             fi
           done
           exit "$fail"
