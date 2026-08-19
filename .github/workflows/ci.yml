@@ -19,8 +19,11 @@ name: ci
 # vacuously.
 
 on:
+  # No branch filter on pull_request. A stacked PR targets its parent branch
+  # rather than main, and a [main] filter gives it zero check runs — which on
+  # the PR page is indistinguishable from a gate nobody wrote. Every PR gets
+  # checked, wherever it is aimed.
   pull_request:
-    branches: [main]
   push:
     branches: [main]
   # Engine drift lands without a commit here, so polling is the only way to see
