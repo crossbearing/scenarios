@@ -5,23 +5,25 @@
 # requires sts:SourceIdentity (fix/trust-policy.after.json), so every
 # AssumeRole must name its human — priya@example.com rides on every CloudTrail
 # event (userIdentity.sessionContext.sourceIdentity). That per-event,
-# record-carried identity is all the proof needs: nothing is passed on the
-# command line here.
+# record-carried identity is what closes the headline: it de-escalates the
+# production write on its own, whatever the launch side declared.
 #
 # The unclaimed lambda:UpdateFunctionCode is still unclaimed by the agent — a
 # real gap the report keeps showing — but it is no longer ownerless: the
 # record itself names priya via sts-source-identity, so the finding drops from
-# UNATTRIBUTED to a plain UNCLAIMED-RECORD owned by a named human. The report
-# still asks the launch side to declare its operator, but as an ATTRIBUTION
-# gap ("records name the human; the agent session declared no operator") — a
-# convention todo, not a condition of the proof.
+# UNATTRIBUTED to a plain UNCLAIMED-RECORD owned by a named human.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# --operator is the point of the fix: the deploy role now asserts SourceIdentity,
-# so the operator can name the human the records will carry. Without it the agent
-# session has no human of its own, and the join will not let a claim consume a
-# production record it cannot prove is the agent's.
+# --operator declares the same human the records already carry, and it earns its
+# place here rather than just clearing a convention nudge. Drop it and the agent
+# session has no human of its own, so the join refuses to let a claim consume a
+# production record it cannot prove is the agent's: lambda:PublishVersion splits
+# into an UNCLAIMED-RECORD plus an UNRECORDED-CLAIM (unclaimed-record 1 → 2,
+# corroborated 3 → 2), and an ATTRIBUTION gap line appears asking for it. With
+# it, declaration and record agree — the session line reads (declared), the
+# ATTRIBUTION line binds (sts-source-identity), and the report raises neither a
+# gap nor a CONFLICT.
 "${CROSSBEARING:-crossbearing}" report \
   --transcript       claims/transcript.jsonl \
   --aws-cloudtrail   records/aws-cloudtrail-fixed.json \
