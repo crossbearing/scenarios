@@ -11,10 +11,19 @@ name: ci
 # The engine is a separate repository, so this is a cross-repo gate: a change
 # there can turn this red without a commit here. That is the point. The weekly
 # schedule is what catches it, since engine changes do not touch this repo.
+#
+# Every step below has a failing state, deliberately. A check that can only pass
+# reads as "verified" when it means "not checked" — so the scenario contract is
+# asserted before anything runs, a missing fixture is an error rather than a
+# skip, and a README that quotes no output at all fails instead of passing
+# vacuously.
 
 on:
+  # No branch filter on pull_request. A stacked PR targets its parent branch
+  # rather than main, and a [main] filter gives it zero check runs — which on
+  # the PR page is indistinguishable from a gate nobody wrote. Every PR gets
+  # checked, wherever it is aimed.
   pull_request:
-    branches: [main]
   push:
     branches: [main]
   # Engine drift lands without a commit here, so polling is the only way to see
@@ -28,79 +37,204 @@ permissions:
 
 jobs:
   verify:
+    # Branch protection requires the status context "Verify" by exact name.
+    # Renaming this job — or splitting it into a matrix, which appends the matrix
+    # value to every context — leaves that required check permanently pending and
+    # blocks every PR on a report that will never arrive. Keep the name.
     name: Verify
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      # Actions are pinned by commit SHA rather than by tag. A moving major tag
+      # is a third party's code entering this workflow on their schedule instead
+      # of ours; the trailing comment records which release the SHA is.
+      # @pin both track their current major. Bumping a major is its own change,
+      # so that a red run stays attributable to one thing.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The engine is public, so no token is needed. Pinned to main: this gate
-      # answers "does the gallery hold against the engine we ship today", which
-      # is the question a reader cloning both repos is really asking.
-      - name: Check out the engine
-        uses: actions/checkout@v7
+      # Shell is the only executable artifact in this repo, so this is the whole
+      # of its static analysis. It runs inside Verify rather than as a job of its
+      # own because Verify is the only required context: a lint job nothing
+      # blocks on is precisely the can-only-pass gate this file avoids.
+      - name: Lint every script
+        run: shellcheck -S style */run*.sh */fix/*.sh
+
+      # The contract a scenario directory must satisfy, asserted up front. The
+      # replay loop used to open with `[ -f ... ] || continue`, so a half-added
+      # scenario was skipped in silence and the run went green having checked
+      # nothing. Every top-level directory is a scenario; adding one that isn't
+      # means updating this step.
+      - name: Check the scenario contract
+        run: |
+          # nullglob so an empty gallery yields zero iterations. Without it `*/`
+          # expands to the literal string, count is 1, and the "gallery is empty"
+          # branch below can never fire — a guard that cannot fail, which is the
+          # thing this file exists to stop shipping.
+          shopt -s nullglob
+          fail=0
+          count=0
+          for dir in */; do
+            name="${dir%/}"
+            count=$((count + 1))
+            for required in README.md run.sh run-fixed.sh \
+                            expected-output.txt expected-output-fixed.txt; do
+              if [ ! -f "$name/$required" ]; then
+                echo "FAIL  $name is missing $required"
+                fail=1
+              fi
+            done
+            for script in run.sh run-fixed.sh; do
+              if [ -f "$name/$script" ] && [ ! -x "$name/$script" ]; then
+                echo "FAIL  $name/$script is not executable"
+                fail=1
+              fi
+            done
+          done
+          if [ "$count" -eq 0 ]; then
+            echo "FAIL  no scenario directories found — the gallery is empty"
+            fail=1
+          fi
+          [ "$fail" = 0 ] && echo "PASS  $count scenario(s) satisfy the contract"
+          exit "$fail"
+
+      # A scenario's README quotes report lines verbatim. When a fixture is
+      # regenerated and the prose is not, the gallery contradicts itself just as
+      # loudly as a stale fixture does — and that is invisible to the replay diff.
+      #
+      # The rule is structural, not a keyword list: inside a scenario README a
+      # fenced block with no language tag IS engine output, and every non-blank
+      # line in one must appear verbatim in that scenario's fixtures. The earlier
+      # version grepped four line prefixes (record/claim/why/records), which
+      # checked 25 lines across the gallery and left 39 unchecked — and both
+      # drifts that reached main lived entirely in the unchecked set: a phantom
+      # ATTRIBUTION entry the engine never emits, and a `gap:` line belonging to
+      # a different scenario.
+      #
+      # Prose quotes outside a fence are not covered, because they wrap across
+      # lines and there is nothing to match verbatim. Quote the report inside a
+      # bare fence and it is checked.
+      - name: Check the READMEs still quote real output
+        run: |
+          fail=0
+          for dir in */; do
+            name="${dir%/}"
+            quoted="$RUNNER_TEMP/$name.quoted"
+            awk '
+              { line = $0; sub(/[ \t]+$/, "", line) }
+              line ~ /^```/ {
+                if (inblock == 2 && tagged ~ /run-fixed\.sh/) { fixture = "expected-output-fixed.txt" }
+                else if (inblock == 2 && tagged ~ /run\.sh/)  { fixture = "expected-output.txt" }
+                if (inblock) { inblock = 0; tagged = "" }
+                else { inblock = (line == "```") ? 1 : 2 }
+                next
+              }
+              inblock == 2 { tagged = tagged "\n" line; next }
+              inblock == 1 { print (fixture == "" ? "?" : fixture) "\t" line }
+            ' "$name/README.md" > "$quoted"
+
+            checked=0
+            while IFS=$'\t' read -r fixture line; do
+              [ -z "${line//[[:space:]]/}" ] && continue
+              checked=$((checked + 1))
+              if [ "$fixture" = "?" ]; then
+                echo "FAIL  $name/README.md quotes output before naming which script produced it:"
+                echo "      $line"
+                fail=1
+              elif ! grep -Fqx "$line" "$name/$fixture"; then
+                echo "FAIL  $name/README.md quotes a line $fixture does not produce:"
+                echo "      $line"
+                fail=1
+              fi
+            done < "$quoted"
+
+            floor=$(awk -v s="$name" '$1 == s { print $2 }' .readme-quote-floor)
+            if [ -z "$floor" ]; then
+              echo "FAIL  $name has no entry in .readme-quote-floor"
+              fail=1
+            elif [ "$checked" -lt "$floor" ]; then
+              echo "FAIL  $name/README.md quotes $checked line(s), floor is $floor —"
+              echo "      coverage may only be lowered deliberately, in the same diff"
+              fail=1
+            elif [ "$fail" = 0 ]; then
+              echo "PASS  $name/README.md — $checked quoted line(s) match $floor-line floor"
+            fi
+          done
+          exit "$fail"
+
+      # Two engines, both required to replay clean. The pin is what makes
+      # "byte-for-byte identical" a claim that survives next month; main is what
+      # answers "does the gallery still hold against the engine a reader would
+      # install right now". Engine drift shows up as the main replay failing
+      # while the pinned replay stays green, which names the cause on sight.
+      - name: Resolve the pinned engine
+        id: pin
+        run: |
+          ref="$(tr -d '[:space:]' < .engine-pin)"
+          [ -n "$ref" ] || { echo "FAIL  .engine-pin is empty"; exit 1; }
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "pinned engine: $ref"
+
+      - name: Check out the engine (pinned)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: crossbearing/crossbearing
+          ref: ${{ steps.pin.outputs.ref }}
+          path: .engine-pinned
+
+      - name: Check out the engine (today's main)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: crossbearing/crossbearing
           ref: main
-          path: .engine
+          path: .engine-main
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: .engine/go.mod
-          cache-dependency-path: .engine/go.sum
+          go-version-file: .engine-main/go.mod
+          cache-dependency-path: .engine-main/go.sum
 
-      - name: Build the engine
-        run: go build -o "$RUNNER_TEMP/crossbearing" ./cmd/crossbearing
-        working-directory: .engine
+      - name: Build the pinned engine
+        run: go build -o "$RUNNER_TEMP/crossbearing-pinned" ./cmd/crossbearing
+        working-directory: .engine-pinned
 
-      # Every scenario, both variants, byte-for-byte against its fixture. The
-      # loop runs all of them before failing so one broken scenario does not
-      # hide the state of the other three.
+      - name: Build today's engine
+        run: go build -o "$RUNNER_TEMP/crossbearing-main" ./cmd/crossbearing
+        working-directory: .engine-main
+
+      # Every scenario, both variants, against both engines, byte-for-byte. The
+      # loop runs all of them before failing so one broken scenario does not hide
+      # the state of the other three.
       #
       # Output goes to a file, never through $(...): command substitution strips
       # trailing newlines, and these fixtures end on a blank line, so capturing
       # to a variable silently rewrites the very bytes this step exists to
       # compare. A file keeps the comparison honest.
       - name: Replay every scenario
-        env:
-          CROSSBEARING: ${{ runner.temp }}/crossbearing
         run: |
           fail=0
           actual="$RUNNER_TEMP/actual.txt"
-          for dir in */; do
-            name="${dir%/}"
-            for pair in "run.sh:expected-output.txt" "run-fixed.sh:expected-output-fixed.txt"; do
-              script="${pair%%:*}"
-              expected="${pair##*:}"
-              [ -f "$name/$script" ] && [ -f "$name/$expected" ] || continue
-              if "./$name/$script" > "$actual" 2>/dev/null && \
-                 diff -u "$name/$expected" "$actual" > /dev/null; then
-                echo "PASS  $name/$script"
-              else
-                echo "FAIL  $name/$script"
-                diff -u "$name/$expected" "$actual" || true
-                fail=1
-              fi
-            done
-          done
-          exit "$fail"
 
-      # A scenario's README quotes report lines verbatim. When a fixture is
-      # regenerated and the prose is not, the gallery contradicts itself just as
-      # loudly as a stale fixture does — and that is invisible to the diff above.
-      - name: Check the READMEs still quote real output
-        run: |
-          fail=0
-          for dir in */; do
-            name="${dir%/}"
-            [ -f "$name/README.md" ] || continue
-            while IFS= read -r line; do
-              [ -z "${line//[[:space:]]/}" ] && continue
-              if ! grep -Fqx "$line" "$name"/expected-output*.txt 2>/dev/null; then
-                echo "FAIL  $name/README.md quotes a line no fixture produces:"
-                echo "      $line"
-                fail=1
-              fi
-            done < <(grep -hE '^  (record|claim|why|records)  ' "$name/README.md" || true)
-          done
-          [ "$fail" = "0" ] && echo "PASS  every quoted report line appears in a fixture"
+          replay() {
+            engine="$1"
+            label="$2"
+            echo "── engine: $label ──"
+            for dir in */; do
+              name="${dir%/}"
+              for pair in "run.sh:expected-output.txt" \
+                          "run-fixed.sh:expected-output-fixed.txt"; do
+                script="${pair%%:*}"
+                expected="${pair##*:}"
+                if CROSSBEARING="$engine" "./$name/$script" > "$actual" 2>/dev/null && \
+                   diff -u "$name/$expected" "$actual" > /dev/null; then
+                  echo "PASS  $name/$script"
+                else
+                  echo "FAIL  $name/$script"
+                  diff -u "$name/$expected" "$actual" || true
+                  fail=1
+                fi
+              done
+            done
+          }
+
+          replay "$RUNNER_TEMP/crossbearing-pinned" "pinned ${{ steps.pin.outputs.ref }}"
+          replay "$RUNNER_TEMP/crossbearing-main" "today's main"
           exit "$fail"
