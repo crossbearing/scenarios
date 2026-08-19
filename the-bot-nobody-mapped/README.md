@@ -80,8 +80,6 @@ crossbearing divergence report
   unattributed 2 · mismatch 0 · unclaimed-record 0 · unrecorded-claim 0 · corroborated 2
 
 ATTRIBUTION
-  agent session prod-release-202… ≈ credential session github:deploy-shuttle[bot]@2026-06-24T09:15:02Z
-    window-overlap · human=UNATTRIBUTED (unattributed) · evidence: 0 item(s)
   agent session prod-release-202… ≈ credential session github:mira-chen@2026-06-24T09:00:35Z
     window-overlap · human=mira-chen (actor-identity) · evidence: 2 item(s)
     gap: records name the human; the agent session declared no operator — pass --operator so the declaration can be cross-checked against the records
@@ -99,13 +97,24 @@ UNATTRIBUTED (2)
 (Full pinned output, including the two CORROBORATED findings, in
 [`expected-output.txt`](expected-output.txt).)
 
-The **how-it-happens** is the two ATTRIBUTION lines side by side: one actor is a
-GitHub username and resolves to `human=mira-chen (actor-identity)`; the other is
-a GitHub App and resolves to `human=UNATTRIBUTED (unattributed)`. Same window,
-same production repo, and the engine can name one hand on the wheel but not the
-other. The **how-we-help** is the UNATTRIBUTED tier: the two production writes
-the log could not assign to anyone are pulled out by name and event ID, not left
-in a scroll of routine audit noise.
+The **how-it-happens** is the UNATTRIBUTED pair set against the single binding
+the report shows. `run.sh` asserts `--principal mira-chen`, and that assertion
+scopes the ATTRIBUTION view: the engine hands `attribute.Bind` only the credential
+sessions whose ID matches the asserted principal
+([`cmd/crossbearing/main.go`](../../crossbearing/cmd/crossbearing/main.go), the
+`recordSessions` filter). So the block names `github:mira-chen`, the human the
+records authenticate as herself. The bot's own credential session — which the
+engine *does* build, and which the mapping below binds — is simply outside this
+view.
+
+The scoping is not cosmetic. Drop `--principal` and mira-chen's own records stop
+being corroborable at all (`corroborated 2 → 0`, `unattributed 2 → 4`), because
+the operator has then asserted nothing about which principal is the agent's, and
+the engine will not guess.
+
+The **how-we-help** is the UNATTRIBUTED tier: the two production writes the log
+could not assign to anyone are pulled out by name and event ID, not left in a
+scroll of routine audit noise.
 
 The `gap:` line under the `mira-chen` binding is the convention nudge, not a
 finding: the records *do* name a human here (mira-chen, cloud-authenticated as
@@ -233,9 +242,6 @@ CLI. `run-fixed.sh` is `run.sh` plus one flag —
   unattributed 0 · mismatch 0 · unclaimed-record 2 · unrecorded-claim 0 · corroborated 2
 
 ATTRIBUTION
-  agent session prod-release-202… ≈ credential session github:deploy-shuttle[bot]@2026-06-24T09:15:02Z
-    window-overlap · human=dana-okafor@shuttlecorp.com (github-app) · evidence: 2 item(s)
-    gap: records name the human; the agent session declared no operator — pass --operator so the declaration can be cross-checked against the records
   agent session prod-release-202… ≈ credential session github:mira-chen@2026-06-24T09:00:35Z
     window-overlap · human=mira-chen (actor-identity) · evidence: 2 item(s)
     gap: records name the human; the agent session declared no operator — pass --operator so the declaration can be cross-checked against the records
@@ -253,13 +259,19 @@ UNCLAIMED-RECORD (2)
 (Full pinned output in [`expected-output-fixed.txt`](expected-output-fixed.txt);
 every run is byte-for-byte identical.)
 
-The headline moves the whole distance: `unattributed 2 → 0`. The bot's
-ATTRIBUTION line now binds `human=dana-okafor@shuttlecorp.com (github-app)` —
-record-proven, not self-declared — with `evidence: 2 item(s)` where before it
-had zero. And every bot record renders the carried identity inline
-(`… by deploy-shuttle[bot] as dana-okafor@shuttlecorp.com`), so the mapping is
-legible at the exact line where the de-escalation happens. The App stops being
-anonymous.
+The headline moves the whole distance: `unattributed 2 → 0`. Notice where it does
+*not* show up — the ATTRIBUTION block is byte-identical to the detection's. That
+is the `--principal mira-chen` scope again, not an absence of binding: the
+ingester does bind the bot's session to `dana-okafor@shuttlecorp.com` with method
+`github-app`, exactly as described above, but that session sits outside the
+asserted principal, so this view does not print it.
+
+What closes the finding is the other half — the per-event stamp. Every bot record
+now renders the mapped human inline
+(`… by deploy-shuttle[bot] as dana-okafor@shuttlecorp.com`), so the de-escalation
+is legible at the exact line where it happens and rests on the record rather than
+on which overlapping window the record fell into. The App stops being anonymous
+where it counts.
 
 And the two production writes? They are **still there** — `run-fixed.sh` still
 lists them as `UNCLAIMED-RECORD`, because the agent still never claimed them, and
@@ -268,27 +280,22 @@ that is a real gap worth chasing. What changed is the class: they are no longer
 now have an owner. `unattributed 2 → 0`, on the strength of the per-event stamp
 alone — no `--operator`, no masking.
 
-Two honest details remain in the fixed output, and the report names both.
-
-The **`gap:` line still appears** — now under *both* bindings, because both
-sessions now name a human. It is the same convention nudge the detection carried:
+One honest detail remains in the fixed output, and the report names it. The
+**`gap:` line still appears**, under the single `mira-chen` binding, unchanged
+from the detection:
 
 > gap: records name the human; the agent session declared no operator — pass
 > --operator so the declaration can be cross-checked against the records
 
-The records already name mira-chen and dana-okafor; the harness that launched
-the agent never declared an operator, so there is nothing to cross-check the
-records *against*. Passing `--operator dana-okafor@shuttlecorp.com` would clear
-the gap and let the engine confirm the declaration matches the record-proven
-identity (and raise a `CONFLICT` if it didn't). But that is hardening a control,
-not a condition of the proof — the headline is already closed by the mapping.
-
-The second detail is the **human actor's own gap**: `mira-chen` is named by the
-records but no operator was declared for the agent session, exactly as in the
-detection. The mapping fixes the *bot* half; it does nothing for the human half,
-and the report keeps saying so. That is correct — mapping a bot to its owner is a
-different remediation from declaring the agent's operator, and the fixed run
-proves the first without pretending to have done the second.
+The records name mira-chen; the harness that launched the agent declared no
+operator, so there is nothing to cross-check them *against*. Passing
+`--operator mira-chen` clears it and lets the engine confirm the declaration
+matches the record-proven identity (raising `CONFLICT` if it didn't) — and here
+it costs nothing else: the two unclaimed records and two corroborations are
+unchanged. The mapping fixes the *bot* half of this scenario and does nothing for
+the human half, and the report keeps saying so. That is correct: mapping a bot to
+its owner is a different remediation from declaring the agent's operator, and the
+fixed run proves the first without pretending to have done the second.
 
 That is the point of the whole gallery in one flag: the installation mapping did
 not make the agent honest about what its PR triggered. It made the trigger

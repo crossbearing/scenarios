@@ -189,7 +189,6 @@ trust-policy fix alone closes the headline.
 ATTRIBUTION
   agent session prod-deploy-2026… ⇄ credential session deploy-bot@2026-06-23T14:00:09Z key=ASIADEPLOYBOT0001
     corroborated · human=priya@example.com (sts-source-identity) · evidence: 7 item(s)
-    gap: records name the human; the agent session declared no operator — pass --operator so the declaration can be cross-checked against the records
 
 UNCLAIMED-RECORD (1)
   record  lambda:UpdateFunctionCode on arn:aws:lambda:us-east-1:111122223333:function:prod-checkout-api at 14:12:40Z by arn:aws:sts::111122223333:assumed-role/prod-deployer/deploy-bot as priya@example.com
@@ -209,18 +208,25 @@ real gap worth chasing. What changed is the class: it is no longer
 **unattributed**. The deploy the records could not assign to anyone now has an
 owner. `unattributed 1 → 0`, on the strength of the record alone.
 
-There is one remaining launch-side todo, and the report names it — a convention
-gap under ATTRIBUTION, not a finding:
+`run-fixed.sh` also declares that human to the harness, with
+`--operator priya@example.com`, and the flag earns its place — it is not just a
+convention nudge. The trust policy alone closes the *headline*: record-carried
+identity de-escalates the write whatever the launch side says. But the *join*
+still needs to know whose session this is. The rule keys on **write-ness, not
+production-ness**: a read changed nothing, so mis-pairing one can erase no
+divergence and reads stay freely matchable, but a write must prove ownership —
+which means the record's `sourceIdentity` equalling the session's human
+(`internal/corroborate/matcher.go`, the `consumable` guard). Undeclared, the
+session's human is empty, so nothing matches and the `publish-version` pair
+splits in half — the record becomes a second `UNCLAIMED-RECORD` and its claim an
+`UNRECORDED-CLAIM` (`unclaimed-record 1 → 2`, `corroborated 3 → 2`) — and an
+ATTRIBUTION `gap:` line appears asking for the declaration. With it, both halves agree: the session
+line reads `(declared)`, the ATTRIBUTION line binds `(sts-source-identity)` from
+the records, and the report raises neither a gap nor a `CONFLICT`.
 
-> gap: records name the human; the agent session declared no operator — pass
-> --operator so the declaration can be cross-checked against the records
-
-The records already name priya; the harness that launched the agent never
-declared an operator, so there is nothing to cross-check the records *against*.
-Passing `--operator priya@example.com` would clear the gap and let the engine
-confirm the declaration matches the cloud-proven identity (and raise a `CONFLICT`
-if it didn't). But that is hardening a control, not a condition of the proof:
-the headline is already closed.
+Two controls, two different jobs. The trust policy makes the *records* name a
+human. The operator declaration makes the *session* claim one — so the two can
+be checked against each other.
 
 That is the point of the whole gallery in one diff: source identity did not make
 the agent honest about what it pushed. It made the push *accountable* — bound to
@@ -252,13 +258,17 @@ session-level inference never de-escalate, only identity on the record.
 
 That is why the trust-policy fix alone closes the headline here: the CloudTrail
 events carry `sourceIdentity`, the record names priya, and the finding drops to a
-plain `UNCLAIMED-RECORD`. The launch-side control — declaring the operator to the
-harness — is still worth wiring, but it now surfaces as an **ATTRIBUTION gap
-line** ("records name the human; the agent session declared no operator — pass
---operator …"), a convention todo the report keeps asking for, not a requirement
-the proof depends on. Declaring it lets the engine cross-check the harness's word
-against the records (and `CONFLICT` if they disagree); leaving it undeclared costs
-you that cross-check, nothing more.
+plain `UNCLAIMED-RECORD` — `unattributed 1 → 0` without the harness saying a
+word. The launch-side control is a separate job, and `run-fixed.sh` wires it with
+`--operator`. That buys more than a cross-check: the join will not let a claim
+consume a *write* it cannot prove belongs to the agent — and it gates on
+write-ness rather than production-ness on purpose, because a write's
+production-ness may be unknown to the ingester while the fact that it changed
+something is not. So an undeclared session leaves `lambda:PublishVersion` split
+into an `UNCLAIMED-RECORD` plus an `UNRECORDED-CLAIM` instead of one corroborated
+pair.
+Declared, the two agree, and the engine confirms the harness's word against the
+records — raising `CONFLICT` if they ever disagreed.
 
 The trust-policy check itself is a live `iam:GetRole` read the offline runs skip;
 the `RequiresSourceIdentity` semantics quoted above were verified against
