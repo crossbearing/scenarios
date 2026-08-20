@@ -1,12 +1,9 @@
 name: ci
 
 # The gallery is a promise: every scenario runs offline in seconds and prints
-# what its README says it prints. Nothing enforced that, and all eight runs had
-# quietly drifted from the engine — the published findings no longer reproduced.
-#
-# This builds the engine from source and replays every scenario against its
-# committed fixture. It fails on the first byte of difference, so the gallery
-# cannot silently stop being true again.
+# what its README says it prints. This workflow is what holds the promise. It
+# builds the engine from source and replays every scenario against its committed
+# fixture, failing on the first byte of difference.
 #
 # The engine is a separate repository, so this is a cross-repo gate: a change
 # there can turn this red without a commit here. That is the point. The weekly
@@ -27,7 +24,7 @@ on:
   push:
     branches: [main]
   # Engine drift lands without a commit here, so polling is the only way to see
-  # it. Mondays 07:30 UTC, after the org's three dependency scans.
+  # it. Mondays 07:30 UTC, staggered after the organization's dependency scans.
   schedule:
     - cron: "30 7 * * 1"
   workflow_dispatch:
@@ -47,8 +44,9 @@ jobs:
       # Actions are pinned by commit SHA rather than by tag. A moving major tag
       # is a third party's code entering this workflow on their schedule instead
       # of ours; the trailing comment records which release the SHA is.
-      # @pin both track their current major. Bumping a major is its own change,
-      # so that a red run stays attributable to one thing.
+      # @pin each is held at the major named in its trailing comment. Bumping a
+      # major is its own change, so that a red run stays attributable to one
+      # thing.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Shell is the only executable artifact in this repo, so this is the whole
@@ -58,17 +56,17 @@ jobs:
       - name: Lint every script
         run: shellcheck -S style */run*.sh */fix/*.sh
 
-      # The contract a scenario directory must satisfy, asserted up front. The
-      # replay loop used to open with `[ -f ... ] || continue`, so a half-added
-      # scenario was skipped in silence and the run went green having checked
-      # nothing. Every top-level directory is a scenario; adding one that isn't
-      # means updating this step.
+      # The contract a scenario directory must satisfy, asserted before anything
+      # is built. The replay loop below therefore carries no existence guard, and
+      # must not grow one: a `[ -f ... ] || continue` there skips a half-added
+      # scenario in silence and reports green having checked nothing. Every
+      # top-level directory is a scenario; adding one that isn't means updating
+      # this step.
       - name: Check the scenario contract
         run: |
           # nullglob so an empty gallery yields zero iterations. Without it `*/`
           # expands to the literal string, count is 1, and the "gallery is empty"
-          # branch below can never fire — a guard that cannot fail, which is the
-          # thing this file exists to stop shipping.
+          # branch below can never fire.
           shopt -s nullglob
           fail=0
           count=0
@@ -100,14 +98,20 @@ jobs:
       # regenerated and the prose is not, the gallery contradicts itself just as
       # loudly as a stale fixture does — and that is invisible to the replay diff.
       #
-      # The rule is structural, not a keyword list: inside a scenario README a
-      # fenced block with no language tag IS engine output, and every non-blank
-      # line in one must appear verbatim in that scenario's fixtures. The earlier
-      # version grepped four line prefixes (record/claim/why/records), which
-      # checked 25 lines across the gallery and left 39 unchecked — and both
-      # drifts that reached main lived entirely in the unchecked set: a phantom
-      # ATTRIBUTION entry the engine never emits, and a `gap:` line belonging to
-      # a different scenario.
+      # The rule is structural rather than a list of line prefixes: inside a
+      # scenario README, a fenced block with no language tag IS engine output,
+      # and every non-blank line in one must appear verbatim in the fixture its
+      # block belongs to. A prefix list only covers the line shapes someone
+      # thought to enumerate, and the report's vocabulary is wider than that —
+      # summary counters, ATTRIBUTION and window-overlap lines and `gap:` lines
+      # each carry a claim a reader will check.
+      #
+      # Each block is bound to one fixture rather than to the union of both. A
+      # block introduced by ```sh ./run.sh``` is checked against
+      # expected-output.txt, one introduced by ```sh ./run-fixed.sh``` against
+      # expected-output-fixed.txt. Matching the union would let a detection line
+      # pasted into an after-the-fix block pass, since it appears in a fixture —
+      # just not in the one the block claims to show.
       #
       # Prose quotes outside a fence are not covered, because they wrap across
       # lines and there is nothing to match verbatim. Quote the report inside a
@@ -160,11 +164,11 @@ jobs:
           done
           exit "$fail"
 
-      # Two engines, both required to replay clean. The pin is what makes
-      # "byte-for-byte identical" a claim that survives next month; main is what
-      # answers "does the gallery still hold against the engine a reader would
-      # install right now". Engine drift shows up as the main replay failing
-      # while the pinned replay stays green, which names the cause on sight.
+      # Two engines, both required to replay clean. The pin is what keeps
+      # "byte-for-byte identical" true for a reader who clones at any later date;
+      # the main leg answers whether the gallery still holds against the engine
+      # `go install ...@latest` returns. Engine drift shows up as the main leg
+      # failing while the pinned leg stays green, which names the cause on sight.
       - name: Resolve the pinned engine
         id: pin
         run: |
@@ -180,7 +184,7 @@ jobs:
           ref: ${{ steps.pin.outputs.ref }}
           path: .engine-pinned
 
-      - name: Check out the engine (today's main)
+      - name: Check out the engine (main)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: crossbearing/crossbearing
@@ -196,7 +200,7 @@ jobs:
         run: go build -o "$RUNNER_TEMP/crossbearing-pinned" ./cmd/crossbearing
         working-directory: .engine-pinned
 
-      - name: Build today's engine
+      - name: Build the engine at main
         run: go build -o "$RUNNER_TEMP/crossbearing-main" ./cmd/crossbearing
         working-directory: .engine-main
 
@@ -236,5 +240,5 @@ jobs:
           }
 
           replay "$RUNNER_TEMP/crossbearing-pinned" "pinned ${{ steps.pin.outputs.ref }}"
-          replay "$RUNNER_TEMP/crossbearing-main" "today's main"
+          replay "$RUNNER_TEMP/crossbearing-main" "main"
           exit "$fail"
